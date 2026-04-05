@@ -1,18 +1,27 @@
 # MarketBot config.yml
 
-# ID del canale Discord dove mandare i prezzi (Developer Mode -> tasto destro canale -> Copy ID)
-discord-channel-id: "123456789012345678"
+# ID del canale Discord (non più necessario con webhook, lascia pure)
+discord-channel-id: ""
 
-# Intervallo in ore tra ogni aggiornamento automatico
-update-interval-hours: 3
+# URL del webhook Discord del canale #mercato
+webhook-url: ""
 
-# Item da monitorare — nome esatto come appare nel config di EconomyShopGUI
-# Puoi aggiungere quanti vuoi in futuro
+# Intervallo in ore tra ogni aggiornamento del mercato
+update-interval-hours: 2
+
+# Intervallo in minuti per il controllo boom/crash
+crash-check-minutes: 10
+
+# Soglia % per alert boom/crash (es. 30 = ±30%)
+crash-boom-threshold: 30
+
+# ID del ruolo da menzionare ad ogni aggiornamento (0 = disabilitato)
+mention-role-id: "0"
+
+# Item da monitorare — formato: NomeSezione.MATERIALE
 items:
-  - COAL
-
-# Colori embed Discord (decimali)
-colors:
-  up: 3066993      # verde
-  down: 15158332   # rosso
-  neutral: 9807270 # grigio
+  - Ores.COAL
+  - Ores.REDSTONE
+  - Ores.GOLD_INGOT
+  - Ores.IRON_INGOT
+  - Ores.COPPER_INGOT
