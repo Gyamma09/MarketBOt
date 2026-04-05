@@ -127,3 +127,4 @@ public class CrashCheckTask extends BukkitRunnable {
         return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }
+
