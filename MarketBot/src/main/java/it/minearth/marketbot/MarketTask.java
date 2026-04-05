@@ -12,6 +12,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,7 +25,6 @@ public class MarketTask extends BukkitRunnable {
     private EconomyShopGUIHook esgui;
 
     private static final String BANNER_URL = "https://i.imgur.com/iSe2ZRj.jpeg";
-    private static final String FOOTER_ICON_URL = "https://i.imgur.com/9uJ1ua3.png";
 
     public MarketTask(MarketBot plugin, PriceStorage storage) {
         this.plugin = plugin;
@@ -121,8 +123,13 @@ public class MarketTask extends BukkitRunnable {
         else if (negativeCount > positiveCount) color = 0xE74C3C;
         else                                    color = 0x95A5A6;
 
-        // Fields: 3 per riga (inline: true)
-        // Discord mette 3 inline fields per riga automaticamente
+        // Orario prossimo aggiornamento
+        int intervalHours = plugin.getConfig().getInt("update-interval-hours", 3);
+        ZonedDateTime nextUpdate = ZonedDateTime.now(ZoneId.of("Europe/Rome"))
+                .plusHours(intervalHours);
+        String nextUpdateStr = nextUpdate.format(DateTimeFormatter.ofPattern("HH:mm"));
+
+        // Fields: 2 per riga (inline true), separatore dopo ogni coppia
         StringBuilder fields = new StringBuilder();
         for (int i = 0; i < results.size(); i++) {
             ItemResult r = results.get(i);
@@ -132,8 +139,8 @@ public class MarketTask extends BukkitRunnable {
             String fieldValue =
                 "```diff\n"
                 + prefix + r.name + "  (" + String.format("%+.1f%%", r.pctSell) + ")\n"
-                + String.format("  Acq: $%.2f %s%+.2f\n", r.buyPrice,  arrow(r.diffBuy),  r.diffBuy)
-                + String.format("  Vend: $%.2f %s%+.2f\n", r.sellPrice, arrow(r.diffSell), r.diffSell)
+                + String.format("  Acq:  $%.2f %s %+.2f\n", r.buyPrice,  arrow(r.diffBuy),  r.diffBuy)
+                + String.format("  Vend: $%.2f %s %+.2f\n", r.sellPrice, arrow(r.diffSell), r.diffSell)
                 + "```";
 
             fields.append("{");
@@ -142,8 +149,8 @@ public class MarketTask extends BukkitRunnable {
             fields.append("\"inline\":true");
             fields.append("}");
 
-            // Ogni 3 item aggiungi un field vuoto per forzare a capo se necessario
-            if ((i + 1) % 3 == 0 && i < results.size() - 1) {
+            // Dopo ogni coppia di 2 item aggiungi field vuoto full-width per forzare a capo
+            if ((i + 1) % 2 == 0 && i < results.size() - 1) {
                 fields.append(",{\"name\":\"\\u200b\",\"value\":\"\\u200b\",\"inline\":false}");
             }
 
@@ -151,7 +158,6 @@ public class MarketTask extends BukkitRunnable {
         }
 
         String timestamp = Instant.now().toString();
-        int intervalHours = plugin.getConfig().getInt("update-interval-hours", 3);
 
         String json = "{"
                 + "\"username\":\"📊 Mercato\","
@@ -160,10 +166,7 @@ public class MarketTask extends BukkitRunnable {
                 + "\"color\":" + color + ","
                 + "\"fields\":[" + fields + "],"
                 + "\"image\":{\"url\":\"" + BANNER_URL + "\"},"
-                + "\"footer\":{"
-                + "\"text\":\"🔄 Prossimo aggiornamento tra " + intervalHours + " ore\","
-                + "\"icon_url\":\"" + FOOTER_ICON_URL + "\""
-                + "},"
+                + "\"footer\":{\"text\":\"🔄 Prossimo aggiornamento alle " + nextUpdateStr + "\"},"
                 + "\"timestamp\":\"" + timestamp + "\""
                 + "}]}";
 
