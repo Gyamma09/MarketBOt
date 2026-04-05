@@ -134,7 +134,7 @@ public class MarketTask extends BukkitRunnable {
             String buyLine = String.format("**Acquisto:** $%.2f  %s `%+.2f (%+.1f%%)`",
                     r.buyPrice, arrow(r.diffBuy), r.diffBuy, r.pctBuy);
 
-            String fieldValue = sellLine + "\\n" + buyLine;
+            String fieldValue = sellLine + "\n" + buyLine;
             String fieldName = trendEmoji + " " + r.name;
 
             fields.append("{");
