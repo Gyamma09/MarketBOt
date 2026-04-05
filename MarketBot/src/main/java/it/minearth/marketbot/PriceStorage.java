@@ -1,15 +1,10 @@
 package it.minearth.marketbot;
 
-
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
 
-/**
- * Gestisce la persistenza dei prezzi precedenti su file prices.yml
- * Salva: ultimo prezzo di vendita e acquisto per ogni item
- */
 public class PriceStorage {
 
     private final File file;
@@ -32,24 +27,40 @@ public class PriceStorage {
         yaml = YamlConfiguration.loadConfiguration(file);
     }
 
-    /** Restituisce l'ultimo prezzo di vendita salvato, o -1 se non esiste */
     public double getLastSellPrice(String item) {
-        return yaml.getDouble(item.toUpperCase() + ".sell", -1);
+        return yaml.getDouble(sanitize(item) + ".sell", -1);
     }
 
-    /** Restituisce l'ultimo prezzo di acquisto salvato, o -1 se non esiste */
     public double getLastBuyPrice(String item) {
-        return yaml.getDouble(item.toUpperCase() + ".buy", -1);
+        return yaml.getDouble(sanitize(item) + ".buy", -1);
     }
 
-    /** Salva i prezzi attuali come "ultimi prezzi" */
     public void savePrice(String item, double sell, double buy) {
-        yaml.set(item.toUpperCase() + ".sell", sell);
-        yaml.set(item.toUpperCase() + ".buy", buy);
+        yaml.set(sanitize(item) + ".sell", sell);
+        yaml.set(sanitize(item) + ".buy", buy);
+        save();
+    }
+
+    /** Ultima percentuale per cui è stato mandato un alert boom/crash */
+    public double getLastAlertPct(String item) {
+        return yaml.getDouble(sanitize(item) + ".lastAlertPct", 0);
+    }
+
+    public void saveLastAlertPct(String item, double pct) {
+        yaml.set(sanitize(item) + ".lastAlertPct", pct);
+        save();
+    }
+
+    private void save() {
         try {
             yaml.save(file);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /** Rimuove caratteri problematici per le chiavi YAML */
+    private String sanitize(String key) {
+        return key.replace(".", "_").replace(" ", "_").toUpperCase();
     }
 }
