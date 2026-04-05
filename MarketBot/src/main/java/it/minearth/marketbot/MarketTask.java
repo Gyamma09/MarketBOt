@@ -72,15 +72,11 @@ public class MarketTask extends BukkitRunnable {
 
         for (String path : itemPaths) {
             // path formato: "ShopName.sectionName.itemKey" es. "Ores.page1.4"
-            String[] parts = path.split("\\.");
-            if (parts.length < 3) {
-                plugin.getLogger().warning("Path non valido (usa formato NomeShop.pagina.numero): " + path);
-                continue;
-            }
 
             try {
-                String sectionName = parts[0];
-                String itemKey = parts[1];
+                String sectionName = parts[parts.length - 2];
+                String itemKey = parts[parts.length - 1];
+
 
                 ShopSection section = esgui.getShopSection(sectionName);
                 if (section == null) {
