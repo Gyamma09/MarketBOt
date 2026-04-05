@@ -74,20 +74,25 @@ public class MarketTask extends BukkitRunnable {
         String[] parts = path.split("\\.");
     
             try {
-                String sectionName = parts[parts.length - 2];
-                String itemKey = parts[parts.length - 1];
-
-
                 ShopSection section = esgui.getShopSection(sectionName);
                 if (section == null) {
-                    plugin.getLogger().info("Items in " + sectionName + ": " + section.getShopItems());
                     plugin.getLogger().warning("Sezione non trovata: " + sectionName);
                     continue;
                 }
-
-                ShopItem shopItem = section.getShopItem(itemKey);
+            
+                // Cerca l'item per materiale
+                org.bukkit.Material targetMaterial = org.bukkit.Material.matchMaterial(itemKey);
+                ShopItem shopItem = null;
+                for (ShopItem si : section.getShopItems()) {
+                    if (si.getName().equalsIgnoreCase(itemKey) || 
+                        (targetMaterial != null && si.getItemToGive().getType() == targetMaterial)) {
+                        shopItem = si;
+                        break;
+                    }
+                }
+            
                 if (shopItem == null) {
-                    plugin.getLogger().info("Items in " + sectionName + ": " + section.getShopItems());
+                    plugin.getLogger().warning("Item non trovato nella sezione " + sectionName + ": " + itemKey);
                     continue;
                 }
 
