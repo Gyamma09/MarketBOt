@@ -16,15 +16,13 @@
     </properties>
 
     <repositories>
-        <!-- Paper API -->
         <repository>
             <id>papermc</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
-        <!-- EconomyShopGUI Premium -->
         <repository>
-            <id>gypsidev-repo</id>
-            <url>https://repo.gypsi.dev/repository/maven-public/</url>
+            <id>discordsrv</id>
+            <url>https://nexus.scarsz.me/content/groups/public/</url>
         </repository>
     </repositories>
 
@@ -36,12 +34,20 @@
             <version>1.21.1-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
-        <!-- EconomyShopGUI Premium API -->
+        <!-- DiscordSRV -->
+        <dependency>
+            <groupId>github.scarsz</groupId>
+            <artifactId>discordsrv</artifactId>
+            <version>1.27.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- EconomyShopGUI Premium viene aggiunto come JAR locale -->
         <dependency>
             <groupId>me.gypsi</groupId>
             <artifactId>EconomyShopGUI-Premium</artifactId>
-            <version>LATEST</version>
-            <scope>provided</scope>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/EconomyShopGUI-Premium.jar</systemPath>
         </dependency>
     </dependencies>
 
