@@ -99,8 +99,8 @@ public class MarketTask extends BukkitRunnable {
                 double currentBuy  = (buyObj  != null) ? buyObj  : 0;
 
                 // Prezzo base dal config di ESGUI (prima del dynamic pricing)
-                double baseSell = shopItem.getSellPriceRaw();
-                double baseBuy  = shopItem.getBuyPriceRaw();
+                double baseSell = shopItem.getSellPriceRaw(1);
+                double baseBuy  = shopItem.getBuyPriceRaw(1);
 
                 // Variazione rispetto al prezzo base del config
                 double diffSell = currentSell - baseSell;
