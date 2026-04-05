@@ -21,7 +21,8 @@ public class MarketTask extends BukkitRunnable {
     private final PriceStorage storage;
     private EconomyShopGUIHook esgui;
 
-    private static final String BANNER_URL = "https://i.imgur.com/SXDIbFJ.png";
+    private static final String BANNER_URL = "https://i.imgur.com/iSe2ZRj.jpeg";
+    private static final String FOOTER_ICON_URL = "https://i.imgur.com/9uJ1ua3.png";
 
     public MarketTask(MarketBot plugin, PriceStorage storage) {
         this.plugin = plugin;
@@ -120,29 +121,31 @@ public class MarketTask extends BukkitRunnable {
         else if (negativeCount > positiveCount) color = 0xE74C3C;
         else                                    color = 0x95A5A6;
 
+        // Fields: 3 per riga (inline: true)
+        // Discord mette 3 inline fields per riga automaticamente
         StringBuilder fields = new StringBuilder();
         for (int i = 0; i < results.size(); i++) {
             ItemResult r = results.get(i);
 
-            // Prefisso colore: + verde, - rosso, spazio neutro
             String prefix = r.diffSell > 0 ? "+" : r.diffSell < 0 ? "-" : " ";
 
-            // Nome colorato in diff block + prezzi sotto
             String fieldValue =
                 "```diff\n"
                 + prefix + r.name + "  (" + String.format("%+.1f%%", r.pctSell) + ")\n"
-                + String.format("  Acquisto: $%.2f  %s  %+.2f\n", r.buyPrice,  arrow(r.diffBuy),  r.diffBuy)
-                + String.format("  Vendita:  $%.2f  %s  %+.2f\n", r.sellPrice, arrow(r.diffSell), r.diffSell)
+                + String.format("  Acq: $%.2f %s%+.2f\n", r.buyPrice,  arrow(r.diffBuy),  r.diffBuy)
+                + String.format("  Vend: $%.2f %s%+.2f\n", r.sellPrice, arrow(r.diffSell), r.diffSell)
                 + "```";
 
-            // Il fieldName è vuoto — tutto il contenuto è nel value
-            String fieldName = "\u200b"; // zero-width space
-
             fields.append("{");
-            fields.append("\"name\":\"").append(escapeJson(fieldName)).append("\",");
+            fields.append("\"name\":\"\\u200b\",");
             fields.append("\"value\":\"").append(escapeJson(fieldValue)).append("\",");
-            fields.append("\"inline\":false");
+            fields.append("\"inline\":true");
             fields.append("}");
+
+            // Ogni 3 item aggiungi un field vuoto per forzare a capo se necessario
+            if ((i + 1) % 3 == 0 && i < results.size() - 1) {
+                fields.append(",{\"name\":\"\\u200b\",\"value\":\"\\u200b\",\"inline\":false}");
+            }
 
             if (i < results.size() - 1) fields.append(",");
         }
@@ -152,20 +155,17 @@ public class MarketTask extends BukkitRunnable {
 
         String json = "{"
                 + "\"username\":\"📊 Mercato\","
-                + "\"embeds\":["
-                // Primo embed: solo banner
-                + "{"
-                + "\"image\":{\"url\":\"" + BANNER_URL + "\"}"
-                + "},"
-                // Secondo embed: dati prezzi
-                + "{"
+                + "\"embeds\":[{"
                 + "\"title\":\"Aggiornamento Prezzi\","
                 + "\"color\":" + color + ","
                 + "\"fields\":[" + fields + "],"
-                + "\"footer\":{\"text\":\"🔄 Prossimo aggiornamento tra " + intervalHours + " ore\"},"
+                + "\"image\":{\"url\":\"" + BANNER_URL + "\"},"
+                + "\"footer\":{"
+                + "\"text\":\"🔄 Prossimo aggiornamento tra " + intervalHours + " ore\","
+                + "\"icon_url\":\"" + FOOTER_ICON_URL + "\""
+                + "},"
                 + "\"timestamp\":\"" + timestamp + "\""
-                + "}"
-                + "]}";
+                + "}]}";
 
         sendWebhook(webhookUrl, json);
     }
