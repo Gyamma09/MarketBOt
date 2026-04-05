@@ -1,8 +1,8 @@
 name: MarketBot
-version: 1.0.1
+version: 1.0.2
 main: it.minearth.marketbot.MarketBot
 api-version: '1.21'
-description: Manda i prezzi aggiornati di EconomyShopGUI su Discord ogni 3 ore via webhook.
+description: Manda i prezzi aggiornati di EconomyShopGUI su Discord ogni 2 ore via webhook.
 authors: [TuoServer]
 
 depend:
