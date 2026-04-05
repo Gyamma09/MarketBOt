@@ -17,7 +17,7 @@ jobs:
       - name: Build with Maven
         run: mvn clean package -f MarketBot/pom.xml
       - name: Upload JAR
-        uses: actions/upload-artifact@v3
+        uses: upload-artifact@v4
         with:
           name: MarketBot
           path: MarketBot/target/MarketBot-*.jar
