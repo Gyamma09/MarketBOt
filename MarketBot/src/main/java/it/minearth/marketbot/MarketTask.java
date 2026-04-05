@@ -21,6 +21,9 @@ public class MarketTask extends BukkitRunnable {
     private final PriceStorage storage;
     private EconomyShopGUIHook esgui;
 
+    // Immagine banner in cima all'embed
+    private static final String BANNER_URL = "https://i.imgur.com/iSe2ZRj.jpeg";
+
     public MarketTask(MarketBot plugin, PriceStorage storage) {
         this.plugin = plugin;
         this.storage = storage;
@@ -113,29 +116,31 @@ public class MarketTask extends BukkitRunnable {
             return;
         }
 
-        // Colore embed
+        // Colore embed in base al trend generale
         int color;
         if (positiveCount > negativeCount)      color = 0x2ECC71; // verde
         else if (negativeCount > positiveCount) color = 0xE74C3C; // rosso
         else                                    color = 0x95A5A6; // grigio
 
-        // Costruisce i fields dell'embed — uno per item
+        // Costruisce i fields — uno per item
+        // Formato:
+        //   Nome (+/-%)        ← fieldName, colorato verde/rosso con emoji
+        //   Acquisto: $X.XX ▲ +0.17
+        //   Vendita:  $X.XX ▼ -0.04
         StringBuilder fields = new StringBuilder();
         for (int i = 0; i < results.size(); i++) {
             ItemResult r = results.get(i);
 
-            String trendEmoji;
-            if (r.diffSell > 0)      trendEmoji = "📈";
-            else if (r.diffSell < 0) trendEmoji = "📉";
-            else                     trendEmoji = "➡️";
+            // Emoji trend + nome + percentuale
+            String trendEmoji = r.diffSell > 0 ? "📈" : r.diffSell < 0 ? "📉" : "➡️";
+            String fieldName = String.format("%s  %s  (%+.1f%%)", trendEmoji, r.name, r.pctSell);
 
-            String sellLine = String.format("**Vendita:** $%.2f  %s `%+.2f (%+.1f%%)`",
-                    r.sellPrice, arrow(r.diffSell), r.diffSell, r.pctSell);
-            String buyLine = String.format("**Acquisto:** $%.2f  %s `%+.2f (%+.1f%%)`",
-                    r.buyPrice, arrow(r.diffBuy), r.diffBuy, r.pctBuy);
-
-            String fieldValue = sellLine + "\n" + buyLine;
-            String fieldName = trendEmoji + " " + r.name;
+            // Righe acquisto e vendita
+            String fieldValue = String.format(
+                    "**Acquisto:** $%.2f  %s  %+.2f\n**Vendita:** $%.2f  %s  %+.2f",
+                    r.buyPrice,  arrow(r.diffBuy),  r.diffBuy,
+                    r.sellPrice, arrow(r.diffSell), r.diffSell
+            );
 
             fields.append("{");
             fields.append("\"name\":\"").append(escapeJson(fieldName)).append("\",");
@@ -149,15 +154,27 @@ public class MarketTask extends BukkitRunnable {
         String timestamp = Instant.now().toString();
         int intervalHours = plugin.getConfig().getInt("update-interval-hours", 3);
 
+        // L'immagine va in "image" per apparire SOTTO il titolo e SOPRA i fields
+        // Per metterla in cima usiamo invece un field vuoto no — usiamo "image" che Discord mostra dopo i fields
+        // Per averla PRIMA dei fields l'unico modo è metterla come "thumbnail" (in alto a destra)
+        // oppure usare un secondo embed con solo l'immagine prima
+        // Usiamo due embeds: primo con solo immagine, secondo con i dati
         String json = "{"
                 + "\"username\":\"📊 Mercato\","
-                + "\"embeds\":[{"
+                + "\"embeds\":["
+                // Primo embed: solo banner
+                + "{"
+                + "\"image\":{\"url\":\"" + BANNER_URL + "\"}"
+                + "},"
+                // Secondo embed: dati prezzi
+                + "{"
                 + "\"title\":\"Aggiornamento Prezzi\","
                 + "\"color\":" + color + ","
                 + "\"fields\":[" + fields + "],"
                 + "\"footer\":{\"text\":\"🔄 Prossimo aggiornamento tra " + intervalHours + " ore\"},"
                 + "\"timestamp\":\"" + timestamp + "\""
-                + "}]}";
+                + "}"
+                + "]}";
 
         sendWebhook(webhookUrl, json);
     }
