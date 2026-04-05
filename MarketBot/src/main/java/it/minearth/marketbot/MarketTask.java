@@ -7,13 +7,13 @@ import me.gypopo.economyshopgui.EconomyShopGUI;
 import me.gypopo.economyshopgui.api.EconomyShopGUIHook;
 import me.gypopo.economyshopgui.objects.ShopItem;
 import me.gypopo.economyshopgui.objects.shops.ShopSection;
+import org.bukkit.Material;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.awt.Color;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class MarketTask extends BukkitRunnable {
 
@@ -51,7 +51,6 @@ public class MarketTask extends BukkitRunnable {
 
         // Inizializza l'hook se non ancora fatto
         if (esgui == null) {
-            plugin.getLogger().info("Sezioni disponibili: " + esgui.getShopSections());
             EconomyShopGUI esguiPlugin = (EconomyShopGUI) plugin.getServer()
                     .getPluginManager().getPlugin("EconomyShopGUI-Premium");
             if (esguiPlugin == null) {
@@ -71,32 +70,34 @@ public class MarketTask extends BukkitRunnable {
         List<ItemResult> results = new ArrayList<>();
 
         for (String path : itemPaths) {
-        String[] parts = path.split("\\.");
-    
+            // formato config: "Ores.COAL" → sectionName=Ores, itemKey=COAL
+            String[] parts = path.split("\\.");
+            String sectionName = parts[parts.length - 2];
+            String itemKey     = parts[parts.length - 1];
+
             try {
                 ShopSection section = esgui.getShopSection(sectionName);
                 if (section == null) {
                     plugin.getLogger().warning("Sezione non trovata: " + sectionName);
                     continue;
                 }
-            
-                // Cerca l'item per materiale
-                org.bukkit.Material targetMaterial = org.bukkit.Material.matchMaterial(itemKey);
+
+                // Cerca l'item per materiale scorrendo la lista
+                Material targetMaterial = Material.matchMaterial(itemKey);
                 ShopItem shopItem = null;
                 for (ShopItem si : section.getShopItems()) {
-                    if (si.getName().equalsIgnoreCase(itemKey) || 
+                    if (si.getName().equalsIgnoreCase(itemKey) ||
                         (targetMaterial != null && si.getItemToGive().getType() == targetMaterial)) {
                         shopItem = si;
                         break;
                     }
                 }
-            
+
                 if (shopItem == null) {
                     plugin.getLogger().warning("Item non trovato nella sezione " + sectionName + ": " + itemKey);
                     continue;
                 }
 
-                // Prendi i prezzi con ItemStack dell'item
                 org.bukkit.inventory.ItemStack stack = shopItem.getItemToGive();
 
                 Double sellObj = esgui.getItemSellPrice(shopItem, stack);
@@ -112,7 +113,6 @@ public class MarketTask extends BukkitRunnable {
                 double diffSell = firstRun ? 0 : currentSell - lastSell;
                 double diffBuy  = firstRun ? 0 : currentBuy  - lastBuy;
 
-                // Nome leggibile: usa il material dell'item
                 String displayName = shopItem.getName();
 
                 results.add(new ItemResult(displayName, currentSell, currentBuy,
@@ -140,7 +140,7 @@ public class MarketTask extends BukkitRunnable {
                     String.format("%s%+.2f", arrow(r.diffBuy), r.diffBuy);
 
             table.append(String.format("%-14s %8.2f %8s %8.2f %8s%n",
-                    capitalize(r.name),
+                    r.name,
                     r.sellPrice, sellVar,
                     r.buyPrice,  buyVar));
         }
@@ -168,11 +168,6 @@ public class MarketTask extends BukkitRunnable {
         if (diff > 0) return "▲";
         if (diff < 0) return "▼";
         return "●";
-    }
-
-    private String capitalize(String s) {
-        if (s == null || s.isEmpty()) return s;
-        return s.charAt(0) + s.substring(1).toLowerCase();
     }
 
     private record ItemResult(
