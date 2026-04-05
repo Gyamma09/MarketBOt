@@ -7,6 +7,8 @@ import me.gypopo.economyshopgui.objects.shops.ShopSection;
 import org.bukkit.Material;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -121,55 +123,44 @@ public class MarketTask extends BukkitRunnable {
             return;
         }
 
-        // Media percentuale SP500-style
         double avgPct = totalPct / results.size();
 
         int color;
         String title;
-        String trendEmoji;
         if (avgPct > 0) {
             color = 0x2ECC71;
             title = "📈  Mercato in Rialzo";
-            trendEmoji = "📈";
         } else if (avgPct < 0) {
             color = 0xE74C3C;
             title = "📉  Mercato in Ribasso";
-            trendEmoji = "📉";
         } else {
             color = 0x95A5A6;
             title = "➡️  Mercato Stabile";
-            trendEmoji = "➡️";
         }
 
-        // Titolo con media tipo SP500: "📈 Mercato in Rialzo  (+1.2%)"
         String fullTitle = title + String.format("  (%+.1f%%)", avgPct);
 
-        // Orario prossimo aggiornamento
         int intervalHours = plugin.getConfig().getInt("update-interval-hours", 2);
         ZonedDateTime nextUpdate = ZonedDateTime.now(ZoneId.of("Europe/Rome")).plusHours(intervalHours);
         String nextUpdateStr = nextUpdate.format(DateTimeFormatter.ofPattern("HH:mm"));
 
-        // Menzione ruolo
         String roleId = plugin.getConfig().getString("mention-role-id", "0");
         String mention = roleId.equals("0") ? "" : "<@&" + roleId + "> ";
 
-        // Fields: 2 per riga
         StringBuilder fields = new StringBuilder();
         for (int i = 0; i < results.size(); i++) {
             ItemResult r = results.get(i);
 
-            String prefix = r.diffSell > 0 ? "+" : r.diffSell < 0 ? "-" : " ";
-
-            // Simbolo per variazione zero
+            String prefix   = r.diffSell > 0 ? "+" : r.diffSell < 0 ? "-" : " ";
             String sellArrow = r.diffSell == 0 ? "●" : arrow(r.diffSell);
             String buyArrow  = r.diffBuy  == 0 ? "●" : arrow(r.diffBuy);
 
             String fieldValue =
-            "```diff\n"
-            + prefix + r.name + " (" + String.format("%+.1f%%", r.pctSell) + ")\n"
-            + String.format(" Acq:%.2f€ %s%+.2f€\n", r.buyPrice,  buyArrow,  r.diffBuy)
-            + String.format(" Vend:%.2f€ %s%+.2f€\n", r.sellPrice, sellArrow, r.diffSell)
-            + "```";
+                "```diff\n"
+                + prefix + r.name + " (" + String.format("%+.1f%%", r.pctSell) + ")\n"
+                + String.format(" Acq:%.2f€ %s%+.2f€\n", r.buyPrice,  buyArrow,  r.diffBuy)
+                + String.format(" Vend:%.2f€ %s%+.2f€\n", r.sellPrice, sellArrow, r.diffSell)
+                + "```";
 
             fields.append("{");
             fields.append("\"name\":\"\\u200b\",");
@@ -198,29 +189,93 @@ public class MarketTask extends BukkitRunnable {
                 + "\"timestamp\":\"" + timestamp + "\""
                 + "}]}";
 
-        sendWebhook(webhookUrl, json);
+        // Manda il messaggio e ottieni l'ID
+        String messageId = sendWebhookAndGetId(webhookUrl, json);
+
+        if (messageId != null) {
+            // Aggiungi alla storia e ottieni eventuale ID da eliminare
+            int maxMessages = plugin.getConfig().getInt("max-messages", 10);
+            String toDelete = storage.addMessageId(messageId, maxMessages);
+
+            if (toDelete != null) {
+                deleteMessage(webhookUrl, toDelete);
+            }
+        }
     }
 
-    private void sendWebhook(String webhookUrl, String json) {
+    /**
+     * Manda il webhook e restituisce l'ID del messaggio creato.
+     * Usa ?wait=true per ottenere la risposta con l'ID.
+     */
+    private String sendWebhookAndGetId(String webhookUrl, String json) {
         try {
-            URL url = new URL(webhookUrl);
+            // ?wait=true fa sì che Discord risponda con il messaggio creato (incluso l'ID)
+            URL url = new URL(webhookUrl + "?wait=true");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");
             conn.setRequestProperty("User-Agent", "MarketBot/1.0.2");
             conn.setDoOutput(true);
+
             try (OutputStream os = conn.getOutputStream()) {
                 os.write(json.getBytes(StandardCharsets.UTF_8));
             }
+
             int responseCode = conn.getResponseCode();
-            if (responseCode == 204 || responseCode == 200) {
-                plugin.getLogger().info("Aggiornamento mercato inviato su Discord.");
+            if (responseCode == 200) {
+                // Leggi la risposta JSON per estrarre l'ID
+                StringBuilder response = new StringBuilder();
+                try (BufferedReader br = new BufferedReader(
+                        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        response.append(line);
+                    }
+                }
+                conn.disconnect();
+
+                // Estrai l'ID dal JSON — cerca "id":"..."
+                String body = response.toString();
+                int idIndex = body.indexOf("\"id\":\"");
+                if (idIndex != -1) {
+                    int start = idIndex + 6;
+                    int end = body.indexOf("\"", start);
+                    String msgId = body.substring(start, end);
+                    plugin.getLogger().info("Messaggio inviato, ID: " + msgId);
+                    return msgId;
+                }
             } else {
                 plugin.getLogger().warning("Webhook risposta inattesa: " + responseCode);
             }
             conn.disconnect();
+
         } catch (Exception e) {
             plugin.getLogger().severe("Errore invio webhook: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Elimina un messaggio Discord tramite l'API webhook DELETE.
+     * URL formato: webhookUrl/messages/messageId
+     */
+    private void deleteMessage(String webhookUrl, String messageId) {
+        try {
+            URL url = new URL(webhookUrl + "/messages/" + messageId);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("DELETE");
+            conn.setRequestProperty("User-Agent", "MarketBot/1.0.2");
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 204) {
+                plugin.getLogger().info("Messaggio eliminato: " + messageId);
+            } else {
+                plugin.getLogger().warning("Errore eliminazione messaggio " + messageId + ": " + responseCode);
+            }
+            conn.disconnect();
+
+        } catch (Exception e) {
+            plugin.getLogger().severe("Errore eliminazione messaggio: " + e.getMessage());
         }
     }
 
