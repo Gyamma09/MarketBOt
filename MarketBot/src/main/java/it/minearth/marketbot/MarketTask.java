@@ -80,6 +80,7 @@ public class MarketTask extends BukkitRunnable {
 
                 ShopSection section = esgui.getShopSection(sectionName);
                 if (section == null) {
+                    plugin.getLogger().info("Items in " + sectionName + ": " + section.getShopItems().keySet());
                     plugin.getLogger().warning("Sezione non trovata: " + sectionName);
                     continue;
                 }
