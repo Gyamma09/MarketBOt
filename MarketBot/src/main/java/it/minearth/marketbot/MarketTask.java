@@ -92,27 +92,27 @@ public class MarketTask extends BukkitRunnable {
 
                 org.bukkit.inventory.ItemStack stack = shopItem.getItemToGive();
 
-                // Prezzo attuale (con dynamic pricing applicato)
                 Double sellObj = esgui.getItemSellPrice(shopItem, stack);
                 Double buyObj  = esgui.getItemBuyPrice(shopItem, stack);
                 double currentSell = (sellObj != null) ? sellObj : 0;
                 double currentBuy  = (buyObj  != null) ? buyObj  : 0;
 
-                // Prezzo base dal config di ESGUI (prima del dynamic pricing)
                 double baseSell = shopItem.getSellPriceRaw(1);
                 double baseBuy  = shopItem.getBuyPriceRaw(1);
 
-                // Variazione rispetto al prezzo base del config
                 double diffSell = currentSell - baseSell;
                 double diffBuy  = currentBuy  - baseBuy;
 
                 double pctSell = (baseSell > 0) ? (diffSell / baseSell) * 100 : 0;
                 double pctBuy  = (baseBuy  > 0) ? (diffBuy  / baseBuy)  * 100 : 0;
 
+                // Variazione totale sul nome: usa sell come indicatore principale
+                double pctTotal = pctSell;
+
                 String displayName = shopItem.getName();
 
                 results.add(new ItemResult(displayName, currentSell, currentBuy,
-                        diffSell, diffBuy, pctSell, pctBuy));
+                        diffSell, diffBuy, pctSell, pctBuy, pctTotal));
 
                 if (diffSell > 0) positiveCount++;
                 else if (diffSell < 0) negativeCount++;
@@ -127,30 +127,37 @@ public class MarketTask extends BukkitRunnable {
             return;
         }
 
-        // Intestazione
-        String header = String.format("  %-13s %7s  %-18s %7s  %s%n",
-                "Item", "Vend.", "Var. vend.", "Acq.", "Var. acq.");
-        String separator = "  " + "─".repeat(62) + "\n";
+        StringBuilder sb = new StringBuilder();
 
-        StringBuilder positive = new StringBuilder();
-        StringBuilder negative = new StringBuilder();
-        StringBuilder neutral  = new StringBuilder();
+        for (int i = 0; i < results.size(); i++) {
+            ItemResult r = results.get(i);
 
-        for (ItemResult r : results) {
-            String sellVar = String.format("%s%+.2f (%+.1f%%)", arrow(r.diffSell), r.diffSell, r.pctSell);
-            String buyVar  = String.format("%s%+.2f (%+.1f%%)", arrow(r.diffBuy),  r.diffBuy,  r.pctBuy);
+            // Riga nome: colorata con + (verde) o - (rosso) in base alla variazione sell
+            String namePrefix;
+            if (r.diffSell > 0)      namePrefix = "+";
+            else if (r.diffSell < 0) namePrefix = "-";
+            else                     namePrefix = " ";
 
-            String line = String.format("%-13s %7.2f  %-18s %7.2f  %s%n",
-                    r.name, r.sellPrice, sellVar, r.buyPrice, buyVar);
+            String nameLine = String.format("%s%-13s  (%+.1f%%)%n",
+                    namePrefix, r.name, r.pctTotal);
 
-            // NB: in diff syntax +/- deve essere il PRIMO carattere della riga (senza spazi prima)
-            if (r.diffSell > 0)      positive.append("+").append(line);
-            else if (r.diffSell < 0) negative.append("-").append(line);
-            else                     neutral.append(" ").append(line);
+            // Righe Buy e Sell: sempre neutre (iniziano con spazio)
+            String buyLine = String.format("  Buy   %7.2f  %s%+.2f (%+.1f%%)%n",
+                    r.buyPrice, arrow(r.diffBuy), r.diffBuy, r.pctBuy);
+            String sellLine = String.format("  Sell  %7.2f  %s%+.2f (%+.1f%%)%n",
+                    r.sellPrice, arrow(r.diffSell), r.diffSell, r.pctSell);
+
+            sb.append(nameLine);
+            sb.append(buyLine);
+            sb.append(sellLine);
+
+            // Separatore tra item (tranne l'ultimo)
+            if (i < results.size() - 1) {
+                sb.append("  ").append("─".repeat(38)).append("\n");
+            }
         }
 
-        String description = "```diff\n" + header + separator
-                + positive + negative + neutral + "```";
+        String description = "```diff\n" + sb + "```";
 
         Color embedColor;
         if (positiveCount > negativeCount)      embedColor = new Color(0x2ECC71);
@@ -181,6 +188,7 @@ public class MarketTask extends BukkitRunnable {
             String name,
             double sellPrice, double buyPrice,
             double diffSell,  double diffBuy,
-            double pctSell,   double pctBuy
+            double pctSell,   double pctBuy,
+            double pctTotal
     ) {}
 }
