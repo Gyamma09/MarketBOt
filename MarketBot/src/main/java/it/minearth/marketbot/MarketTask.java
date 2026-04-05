@@ -131,9 +131,9 @@ public class MarketTask extends BukkitRunnable {
             String fieldValue =
                 "```diff\n"
                 + prefix + r.name + "  (" + String.format("%+.1f%%", r.pctSell) + ")\n"
-                + "```"
-                + String.format("Acquisto: $%.2f  %s  %+.2f\n", r.buyPrice,  arrow(r.diffBuy),  r.diffBuy)
-                + String.format("Vendita:  $%.2f  %s  %+.2f",   r.sellPrice, arrow(r.diffSell), r.diffSell);
+                + String.format("  Acquisto: $%.2f  %s  %+.2f\n", r.buyPrice,  arrow(r.diffBuy),  r.diffBuy)
+                + String.format("  Vendita:  $%.2f  %s  %+.2f\n", r.sellPrice, arrow(r.diffSell), r.diffSell)
+                + "```";
 
             // Il fieldName è vuoto — tutto il contenuto è nel value
             String fieldName = "\u200b"; // zero-width space
