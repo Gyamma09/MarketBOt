@@ -79,8 +79,8 @@ public class MarketTask extends BukkitRunnable {
             }
 
             try {
-                String sectionName = parts[1];
-                String itemKey = parts[2];
+                String sectionName = parts[0];
+                String itemKey = parts[1];
 
                 ShopSection section = esgui.getShopSection(sectionName);
                 if (section == null) {
