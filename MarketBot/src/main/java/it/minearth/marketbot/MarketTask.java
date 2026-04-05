@@ -167,8 +167,8 @@ public class MarketTask extends BukkitRunnable {
             String fieldValue =
                 "```diff\n"
                 + prefix + r.name + "  (" + String.format("%+.1f%%", r.pctSell) + ")\n"
-                + String.format("  B:%.2f€ %s%+.2f€\n", r.buyPrice,  buyArrow,  r.diffBuy)
-                + String.format("  S:%.2f€ %s%+.2f€\n", r.sellPrice, sellArrow, r.diffSell)
+                + String.format("Buy:%.2f€ %s%+.2f€\n", r.buyPrice,  buyArrow,  r.diffBuy)
+                + String.format("Sell:%.2f€ %s%+.2f€\n", r.sellPrice, sellArrow, r.diffSell)
                 + "```";
 
             fields.append("{");
