@@ -21,7 +21,6 @@ public class MarketTask extends BukkitRunnable {
     private final PriceStorage storage;
     private EconomyShopGUIHook esgui;
 
-    // Immagine banner in cima all'embed
     private static final String BANNER_URL = "https://i.imgur.com/iSe2ZRj.jpeg";
 
     public MarketTask(MarketBot plugin, PriceStorage storage) {
@@ -116,31 +115,28 @@ public class MarketTask extends BukkitRunnable {
             return;
         }
 
-        // Colore embed in base al trend generale
         int color;
-        if (positiveCount > negativeCount)      color = 0x2ECC71; // verde
-        else if (negativeCount > positiveCount) color = 0xE74C3C; // rosso
-        else                                    color = 0x95A5A6; // grigio
+        if (positiveCount > negativeCount)      color = 0x2ECC71;
+        else if (negativeCount > positiveCount) color = 0xE74C3C;
+        else                                    color = 0x95A5A6;
 
-        // Costruisce i fields — uno per item
-        // Formato:
-        //   Nome (+/-%)        ← fieldName, colorato verde/rosso con emoji
-        //   Acquisto: $X.XX ▲ +0.17
-        //   Vendita:  $X.XX ▼ -0.04
         StringBuilder fields = new StringBuilder();
         for (int i = 0; i < results.size(); i++) {
             ItemResult r = results.get(i);
 
-            // Emoji trend + nome + percentuale
-            String trendEmoji = r.diffSell > 0 ? "📈" : r.diffSell < 0 ? "📉" : "➡️";
-            String fieldName = String.format("%s  %s  (%+.1f%%)", trendEmoji, r.name, r.pctSell);
+            // Prefisso colore: + verde, - rosso, spazio neutro
+            String prefix = r.diffSell > 0 ? "+" : r.diffSell < 0 ? "-" : " ";
 
-            // Righe acquisto e vendita
-            String fieldValue = String.format(
-                    "**Acquisto:** $%.2f  %s  %+.2f\n**Vendita:** $%.2f  %s  %+.2f",
-                    r.buyPrice,  arrow(r.diffBuy),  r.diffBuy,
-                    r.sellPrice, arrow(r.diffSell), r.diffSell
-            );
+            // Nome colorato in diff block + prezzi sotto
+            String fieldValue =
+                "```diff\n"
+                + prefix + r.name + "  (" + String.format("%+.1f%%", r.pctSell) + ")\n"
+                + "```"
+                + String.format("Acquisto: $%.2f  %s  %+.2f\n", r.buyPrice,  arrow(r.diffBuy),  r.diffBuy)
+                + String.format("Vendita:  $%.2f  %s  %+.2f",   r.sellPrice, arrow(r.diffSell), r.diffSell);
+
+            // Il fieldName è vuoto — tutto il contenuto è nel value
+            String fieldName = "\u200b"; // zero-width space
 
             fields.append("{");
             fields.append("\"name\":\"").append(escapeJson(fieldName)).append("\",");
@@ -154,11 +150,6 @@ public class MarketTask extends BukkitRunnable {
         String timestamp = Instant.now().toString();
         int intervalHours = plugin.getConfig().getInt("update-interval-hours", 3);
 
-        // L'immagine va in "image" per apparire SOTTO il titolo e SOPRA i fields
-        // Per metterla in cima usiamo invece un field vuoto no — usiamo "image" che Discord mostra dopo i fields
-        // Per averla PRIMA dei fields l'unico modo è metterla come "thumbnail" (in alto a destra)
-        // oppure usare un secondo embed con solo l'immagine prima
-        // Usiamo due embeds: primo con solo immagine, secondo con i dati
         String json = "{"
                 + "\"username\":\"📊 Mercato\","
                 + "\"embeds\":["
