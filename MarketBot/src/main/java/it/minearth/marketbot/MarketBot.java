@@ -1,4 +1,4 @@
-package it.tuoserver.marketbot;
+package it.minearth.marketbot;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
