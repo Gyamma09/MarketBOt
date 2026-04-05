@@ -3,8 +3,8 @@ package it.tuoserver.marketbot;
 import github.scarsz.discordsrv.DiscordSRV;
 import github.scarsz.discordsrv.dependencies.jda.api.EmbedBuilder;
 import github.scarsz.discordsrv.dependencies.jda.api.entities.TextChannel;
-import me.gypsi.esgpremium.api.EconomyShopGUIAPI;
-import me.gypsi.esgpremium.api.objects.ShopItem;
+import me.gypsi.economyshopgui.api.EconomyShopGUIAPI;
+import me.gypsi.economyshopgui.api.objects.ShopItem;
 import org.bukkit.Material;
 import org.bukkit.scheduler.BukkitRunnable;
 
