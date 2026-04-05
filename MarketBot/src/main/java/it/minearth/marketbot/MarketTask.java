@@ -49,7 +49,6 @@ public class MarketTask extends BukkitRunnable {
             return;
         }
 
-        // Inizializza l'hook se non ancora fatto
         if (esgui == null) {
             EconomyShopGUI esguiPlugin = (EconomyShopGUI) plugin.getServer()
                     .getPluginManager().getPlugin("EconomyShopGUI-Premium");
@@ -60,17 +59,11 @@ public class MarketTask extends BukkitRunnable {
             esgui = new EconomyShopGUIHook(esguiPlugin);
         }
 
-        StringBuilder table = new StringBuilder();
-        table.append(String.format("%-14s %8s %8s %8s %8s%n",
-                "Item", "Vendita", "Var.", "Acquisto", "Var."));
-        table.append("─".repeat(54)).append("\n");
-
         int positiveCount = 0;
         int negativeCount = 0;
         List<ItemResult> results = new ArrayList<>();
 
         for (String path : itemPaths) {
-            // formato config: "Ores.COAL" → sectionName=Ores, itemKey=COAL
             String[] parts = path.split("\\.");
             String sectionName = parts[parts.length - 2];
             String itemKey     = parts[parts.length - 1];
@@ -82,7 +75,6 @@ public class MarketTask extends BukkitRunnable {
                     continue;
                 }
 
-                // Cerca l'item per materiale scorrendo la lista
                 Material targetMaterial = Material.matchMaterial(itemKey);
                 ShopItem shopItem = null;
                 for (ShopItem si : section.getShopItems()) {
@@ -100,28 +92,30 @@ public class MarketTask extends BukkitRunnable {
 
                 org.bukkit.inventory.ItemStack stack = shopItem.getItemToGive();
 
+                // Prezzo attuale (con dynamic pricing applicato)
                 Double sellObj = esgui.getItemSellPrice(shopItem, stack);
                 Double buyObj  = esgui.getItemBuyPrice(shopItem, stack);
-
                 double currentSell = (sellObj != null) ? sellObj : 0;
                 double currentBuy  = (buyObj  != null) ? buyObj  : 0;
 
-                double lastSell = storage.getLastSellPrice(path);
-                double lastBuy  = storage.getLastBuyPrice(path);
-                boolean firstRun = (lastSell == -1);
+                // Prezzo base dal config di ESGUI (prima del dynamic pricing)
+                double baseSell = shopItem.getSellPriceRaw();
+                double baseBuy  = shopItem.getBuyPriceRaw();
 
-                double diffSell = firstRun ? 0 : currentSell - lastSell;
-                double diffBuy  = firstRun ? 0 : currentBuy  - lastBuy;
+                // Variazione rispetto al prezzo base del config
+                double diffSell = currentSell - baseSell;
+                double diffBuy  = currentBuy  - baseBuy;
+
+                double pctSell = (baseSell > 0) ? (diffSell / baseSell) * 100 : 0;
+                double pctBuy  = (baseBuy  > 0) ? (diffBuy  / baseBuy)  * 100 : 0;
 
                 String displayName = shopItem.getName();
 
                 results.add(new ItemResult(displayName, currentSell, currentBuy,
-                        diffSell, diffBuy, firstRun));
+                        diffSell, diffBuy, pctSell, pctBuy));
 
                 if (diffSell > 0) positiveCount++;
                 else if (diffSell < 0) negativeCount++;
-
-                storage.savePrice(path, currentSell, currentBuy);
 
             } catch (Exception e) {
                 plugin.getLogger().warning("Errore processando item " + path + ": " + e.getMessage());
@@ -133,17 +127,30 @@ public class MarketTask extends BukkitRunnable {
             return;
         }
 
-        for (ItemResult r : results) {
-            String sellVar = r.firstRun ? "  —" :
-                    String.format("%s%+.2f", arrow(r.diffSell), r.diffSell);
-            String buyVar  = r.firstRun ? "  —" :
-                    String.format("%s%+.2f", arrow(r.diffBuy), r.diffBuy);
+        // Intestazione
+        String header = String.format("  %-13s %7s  %-18s %7s  %s%n",
+                "Item", "Vend.", "Var. vend.", "Acq.", "Var. acq.");
+        String separator = "  " + "─".repeat(62) + "\n";
 
-            table.append(String.format("%-14s %8.2f %8s %8.2f %8s%n",
-                    r.name,
-                    r.sellPrice, sellVar,
-                    r.buyPrice,  buyVar));
+        StringBuilder positive = new StringBuilder();
+        StringBuilder negative = new StringBuilder();
+        StringBuilder neutral  = new StringBuilder();
+
+        for (ItemResult r : results) {
+            String sellVar = String.format("%s%+.2f (%+.1f%%)", arrow(r.diffSell), r.diffSell, r.pctSell);
+            String buyVar  = String.format("%s%+.2f (%+.1f%%)", arrow(r.diffBuy),  r.diffBuy,  r.pctBuy);
+
+            String line = String.format("%-13s %7.2f  %-18s %7.2f  %s%n",
+                    r.name, r.sellPrice, sellVar, r.buyPrice, buyVar);
+
+            // NB: in diff syntax +/- deve essere il PRIMO carattere della riga (senza spazi prima)
+            if (r.diffSell > 0)      positive.append("+").append(line);
+            else if (r.diffSell < 0) negative.append("-").append(line);
+            else                     neutral.append(" ").append(line);
         }
+
+        String description = "```diff\n" + header + separator
+                + positive + negative + neutral + "```";
 
         Color embedColor;
         if (positiveCount > negativeCount)      embedColor = new Color(0x2ECC71);
@@ -152,7 +159,7 @@ public class MarketTask extends BukkitRunnable {
 
         EmbedBuilder embed = new EmbedBuilder()
                 .setTitle("📊  Mercato — Aggiornamento Prezzi")
-                .setDescription("```\n" + table + "```")
+                .setDescription(description)
                 .setColor(embedColor)
                 .setFooter("🔄 Prossimo aggiornamento tra " +
                         plugin.getConfig().getInt("update-interval-hours", 3) + " ore")
@@ -173,7 +180,7 @@ public class MarketTask extends BukkitRunnable {
     private record ItemResult(
             String name,
             double sellPrice, double buyPrice,
-            double diffSell, double diffBuy,
-            boolean firstRun
+            double diffSell,  double diffBuy,
+            double pctSell,   double pctBuy
     ) {}
 }
