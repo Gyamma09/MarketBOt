@@ -3,8 +3,8 @@ package it.tuoserver.marketbot;
 import github.scarsz.discordsrv.DiscordSRV;
 import github.scarsz.discordsrv.dependencies.jda.api.EmbedBuilder;
 import github.scarsz.discordsrv.dependencies.jda.api.entities.TextChannel;
-import me.gypsi.economyshopgui.api.EconomyShopGUIAPI;
-import me.gypsi.economyshopgui.api.objects.ShopItem;
+import me.gypopo.economyshopgui.api.EconomyShopGUIHook;
+import me.gypopo.economyshopgui.objects.ShopItem;
 import org.bukkit.Material;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -53,7 +53,7 @@ public class MarketTask extends BukkitRunnable {
             return;
         }
 
-        EconomyShopGUIAPI api = EconomyShopGUIAPI.getInstance();
+        EconomyShopGUIHook api = EconomyShopGUIHook.getInstance();
         if (api == null) {
             plugin.getLogger().warning("EconomyShopGUI API non disponibile!");
             return;
