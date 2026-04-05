@@ -87,7 +87,7 @@ public class MarketTask extends BukkitRunnable {
 
                 ShopItem shopItem = section.getShopItem(itemKey);
                 if (shopItem == null) {
-                    plugin.getLogger().warning("Item non trovato nella sezione " + sectionName + ": " + itemKey);
+                    plugin.getLogger().info("Items in " + sectionName + ": " + section.getShopItems());
                     continue;
                 }
 
