@@ -165,11 +165,11 @@ public class MarketTask extends BukkitRunnable {
             String buyArrow  = r.diffBuy  == 0 ? "●" : arrow(r.diffBuy);
 
             String fieldValue =
-                "```diff\n"
-                + prefix + r.name + "  (" + String.format("%+.1f%%", r.pctSell) + ")\n"
-                + String.format("Buy:%.2f€ %s%+.2f€\n", r.buyPrice,  buyArrow,  r.diffBuy)
-                + String.format("Sell:%.2f€ %s%+.2f€\n", r.sellPrice, sellArrow, r.diffSell)
-                + "```";
+            "```diff\n"
+            + prefix + r.name + " (" + String.format("%+.1f%%", r.pctSell) + ")\n"
+            + String.format(" Acq:%.2f€ %s%+.2f€\n", r.buyPrice,  buyArrow,  r.diffBuy)
+            + String.format(" Vend:%.2f€ %s%+.2f€\n", r.sellPrice, sellArrow, r.diffSell)
+            + "```";
 
             fields.append("{");
             fields.append("\"name\":\"\\u200b\",");
