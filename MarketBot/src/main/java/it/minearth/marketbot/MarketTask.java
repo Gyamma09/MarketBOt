@@ -27,6 +27,7 @@ public class MarketTask extends BukkitRunnable {
     private EconomyShopGUIHook esgui;
 
     private static final String BANNER_URL = "https://i.imgur.com/iSe2ZRj.jpeg";
+    private static final int BAR_LENGTH = 10;
 
     public MarketTask(MarketBot plugin, PriceStorage storage) {
         this.plugin = plugin;
@@ -105,11 +106,22 @@ public class MarketTask extends BukkitRunnable {
                 double pctSell = (baseSell > 0) ? (diffSell / baseSell) * 100 : 0;
                 double pctBuy  = (baseBuy  > 0) ? (diffBuy  / baseBuy)  * 100 : 0;
 
-                results.add(new ItemResult(shopItem.getName(), currentSell, currentBuy,
-                        diffSell, diffBuy, pctSell, pctBuy));
+                // Leggi min/max per il grafico — usa sell come riferimento principale
+                double minSell = shopItem.getMinSell();
+                double maxSell = shopItem.getMaxSell();
+                double minBuy  = shopItem.getMinBuy();
+                double maxBuy  = shopItem.getMaxBuy();
+
+                results.add(new ItemResult(
+                        shopItem.getName(),
+                        currentSell, currentBuy,
+                        diffSell, diffBuy,
+                        pctSell, pctBuy,
+                        minSell, maxSell,
+                        minBuy, maxBuy
+                ));
 
                 totalPct += pctSell;
-
                 if (diffSell > 0) positiveCount++;
                 else if (diffSell < 0) negativeCount++;
 
@@ -148,10 +160,12 @@ public class MarketTask extends BukkitRunnable {
         String mention = roleId.equals("0") ? "" : "<@&" + roleId + "> ";
 
         StringBuilder fields = new StringBuilder();
+
+        // --- Fields prezzi: 2 per riga ---
         for (int i = 0; i < results.size(); i++) {
             ItemResult r = results.get(i);
 
-            String prefix   = r.diffSell > 0 ? "+" : r.diffSell < 0 ? "-" : " ";
+            String prefix    = r.diffSell > 0 ? "+" : r.diffSell < 0 ? "-" : " ";
             String sellArrow = r.diffSell == 0 ? "●" : arrow(r.diffSell);
             String buyArrow  = r.diffBuy  == 0 ? "●" : arrow(r.diffBuy);
 
@@ -165,6 +179,33 @@ public class MarketTask extends BukkitRunnable {
             fields.append("{");
             fields.append("\"name\":\"\\u200b\",");
             fields.append("\"value\":\"").append(escapeJson(fieldValue)).append("\",");
+            fields.append("\"inline\":true");
+            fields.append("}");
+
+            if ((i + 1) % 2 == 0 && i < results.size() - 1) {
+                fields.append(",{\"name\":\"\\u200b\",\"value\":\"\\u200b\",\"inline\":false}");
+            }
+
+            fields.append(",");
+        }
+
+        // --- Separatore grafico ---
+        fields.append("{\"name\":\"📊  Andamento prezzi (Vend.)\",\"value\":\"\\u200b\",\"inline\":false},");
+
+        // --- Fields grafico: uno per item, 2 per riga ---
+        for (int i = 0; i < results.size(); i++) {
+            ItemResult r = results.get(i);
+
+            String bar = buildBar(r.sellPrice, r.minSell, r.maxSell);
+            String barValue = "```\n"
+                    + r.name + "\n"
+                    + String.format("%.2f€ %s %.2f€\n", r.minSell, bar, r.maxSell)
+                    + String.format("       ▲ %.2f€\n", r.sellPrice)
+                    + "```";
+
+            fields.append("{");
+            fields.append("\"name\":\"\\u200b\",");
+            fields.append("\"value\":\"").append(escapeJson(barValue)).append("\",");
             fields.append("\"inline\":true");
             fields.append("}");
 
@@ -189,14 +230,11 @@ public class MarketTask extends BukkitRunnable {
                 + "\"timestamp\":\"" + timestamp + "\""
                 + "}]}";
 
-        // Manda il messaggio e ottieni l'ID
         String messageId = sendWebhookAndGetId(webhookUrl, json);
 
         if (messageId != null) {
-            // Aggiungi alla storia e ottieni eventuale ID da eliminare
             int maxMessages = plugin.getConfig().getInt("max-messages", 10);
             String toDelete = storage.addMessageId(messageId, maxMessages);
-
             if (toDelete != null) {
                 deleteMessage(webhookUrl, toDelete);
             }
@@ -204,12 +242,23 @@ public class MarketTask extends BukkitRunnable {
     }
 
     /**
-     * Manda il webhook e restituisce l'ID del messaggio creato.
-     * Usa ?wait=true per ottenere la risposta con l'ID.
+     * Costruisce la barra testuale █████░░░░░
+     * Posiziona il cursore in base a dove si trova currentPrice tra min e max.
      */
+    private String buildBar(double current, double min, double max) {
+        if (max <= min) return "░".repeat(BAR_LENGTH);
+
+        double ratio = (current - min) / (max - min);
+        ratio = Math.max(0, Math.min(1, ratio)); // clamp 0-1
+
+        int filled = (int) Math.round(ratio * BAR_LENGTH);
+        int empty  = BAR_LENGTH - filled;
+
+        return "█".repeat(filled) + "░".repeat(empty);
+    }
+
     private String sendWebhookAndGetId(String webhookUrl, String json) {
         try {
-            // ?wait=true fa sì che Discord risponda con il messaggio creato (incluso l'ID)
             URL url = new URL(webhookUrl + "?wait=true");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
@@ -223,18 +272,14 @@ public class MarketTask extends BukkitRunnable {
 
             int responseCode = conn.getResponseCode();
             if (responseCode == 200) {
-                // Leggi la risposta JSON per estrarre l'ID
                 StringBuilder response = new StringBuilder();
                 try (BufferedReader br = new BufferedReader(
                         new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
                     String line;
-                    while ((line = br.readLine()) != null) {
-                        response.append(line);
-                    }
+                    while ((line = br.readLine()) != null) response.append(line);
                 }
                 conn.disconnect();
 
-                // Estrai l'ID dal JSON — cerca "id":"..."
                 String body = response.toString();
                 int idIndex = body.indexOf("\"id\":\"");
                 if (idIndex != -1) {
@@ -255,25 +300,19 @@ public class MarketTask extends BukkitRunnable {
         return null;
     }
 
-    /**
-     * Elimina un messaggio Discord tramite l'API webhook DELETE.
-     * URL formato: webhookUrl/messages/messageId
-     */
     private void deleteMessage(String webhookUrl, String messageId) {
         try {
             URL url = new URL(webhookUrl + "/messages/" + messageId);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("DELETE");
             conn.setRequestProperty("User-Agent", "MarketBot/1.0.2");
-
             int responseCode = conn.getResponseCode();
             if (responseCode == 204) {
                 plugin.getLogger().info("Messaggio eliminato: " + messageId);
             } else {
-                plugin.getLogger().warning("Errore eliminazione messaggio " + messageId + ": " + responseCode);
+                plugin.getLogger().warning("Errore eliminazione: " + responseCode);
             }
             conn.disconnect();
-
         } catch (Exception e) {
             plugin.getLogger().severe("Errore eliminazione messaggio: " + e.getMessage());
         }
@@ -296,7 +335,8 @@ public class MarketTask extends BukkitRunnable {
             String name,
             double sellPrice, double buyPrice,
             double diffSell,  double diffBuy,
-            double pctSell,   double pctBuy
+            double pctSell,   double pctBuy,
+            double minSell,   double maxSell,
+            double minBuy,    double maxBuy
     ) {}
 }
-
