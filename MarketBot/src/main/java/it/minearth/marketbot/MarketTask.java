@@ -71,8 +71,8 @@ public class MarketTask extends BukkitRunnable {
         List<ItemResult> results = new ArrayList<>();
 
         for (String path : itemPaths) {
-            // path formato: "ShopName.sectionName.itemKey" es. "Ores.page1.4"
-
+        String[] parts = path.split("\\.");
+    
             try {
                 String sectionName = parts[parts.length - 2];
                 String itemKey = parts[parts.length - 1];
