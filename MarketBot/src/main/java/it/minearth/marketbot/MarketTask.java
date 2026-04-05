@@ -94,7 +94,7 @@ public class MarketTask extends BukkitRunnable {
                 }
 
                 // Prendi i prezzi con ItemStack dell'item
-                org.bukkit.inventory.ItemStack stack = new org.bukkit.inventory.ItemStack(shopItem.getType(), 1);
+                org.bukkit.inventory.ItemStack stack = shopItem.getItemToGive();
 
                 Double sellObj = esgui.getItemSellPrice(shopItem, stack);
                 Double buyObj  = esgui.getItemBuyPrice(shopItem, stack);
@@ -110,7 +110,7 @@ public class MarketTask extends BukkitRunnable {
                 double diffBuy  = firstRun ? 0 : currentBuy  - lastBuy;
 
                 // Nome leggibile: usa il material dell'item
-                String displayName = shopItem.getType().name();
+                String displayName = shopItem.getMaterialName();
 
                 results.add(new ItemResult(displayName, currentSell, currentBuy,
                         diffSell, diffBuy, firstRun));
