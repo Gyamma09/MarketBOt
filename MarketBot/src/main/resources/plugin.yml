@@ -1,0 +1,18 @@
+name: MarketBot
+version: 1.0.0
+main: it.tuoserver.marketbot.MarketBot
+api-version: '1.21'
+description: Manda i prezzi aggiornati di EconomyShopGUI su Discord ogni 3 ore.
+authors: [TuoServer]
+
+depend:
+  - EconomyShopGUI-Premium
+
+softdepend:
+  - DiscordSRV
+
+commands:
+  updatemarket:
+    description: Forza l'aggiornamento dei prezzi su Discord
+    usage: /updatemarket
+    permission: marketbot.update

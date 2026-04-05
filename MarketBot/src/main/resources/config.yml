@@ -1,0 +1,18 @@
+# MarketBot config.yml
+
+# ID del canale Discord dove mandare i prezzi (Developer Mode -> tasto destro canale -> Copy ID)
+discord-channel-id: "123456789012345678"
+
+# Intervallo in ore tra ogni aggiornamento automatico
+update-interval-hours: 3
+
+# Item da monitorare — nome esatto come appare nel config di EconomyShopGUI
+# Puoi aggiungere quanti vuoi in futuro
+items:
+  - COAL
+
+# Colori embed Discord (decimali)
+colors:
+  up: 3066993      # verde
+  down: 15158332   # rosso
+  neutral: 9807270 # grigio
