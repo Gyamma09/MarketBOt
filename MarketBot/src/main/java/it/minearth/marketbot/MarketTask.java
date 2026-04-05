@@ -58,6 +58,9 @@ public class MarketTask extends BukkitRunnable {
         int positiveCount = 0;
         int negativeCount = 0;
         List<ItemResult> results = new ArrayList<>();
+        List<ItemResult> alerts  = new ArrayList<>(); // item con variazione estrema
+
+        double threshold = plugin.getConfig().getDouble("crash-boom-threshold", 30.0);
 
         for (String path : itemPaths) {
             String[] parts = path.split("\\.");
@@ -102,11 +105,17 @@ public class MarketTask extends BukkitRunnable {
                 double pctSell = (baseSell > 0) ? (diffSell / baseSell) * 100 : 0;
                 double pctBuy  = (baseBuy  > 0) ? (diffBuy  / baseBuy)  * 100 : 0;
 
-                results.add(new ItemResult(shopItem.getName(), currentSell, currentBuy,
-                        diffSell, diffBuy, pctSell, pctBuy));
+                ItemResult result = new ItemResult(shopItem.getName(), currentSell, currentBuy,
+                        diffSell, diffBuy, pctSell, pctBuy);
+                results.add(result);
 
                 if (diffSell > 0) positiveCount++;
                 else if (diffSell < 0) negativeCount++;
+
+                // Controlla se supera la soglia boom/crash
+                if (Math.abs(pctSell) >= threshold) {
+                    alerts.add(result);
+                }
 
             } catch (Exception e) {
                 plugin.getLogger().warning("Errore processando " + path + ": " + e.getMessage());
@@ -119,17 +128,28 @@ public class MarketTask extends BukkitRunnable {
         }
 
         int color;
-        if (positiveCount > negativeCount)      color = 0x2ECC71;
-        else if (negativeCount > positiveCount) color = 0xE74C3C;
-        else                                    color = 0x95A5A6;
+        String title;
+        if (positiveCount > negativeCount) {
+            color = 0x2ECC71;
+            title = "📈  Mercato in Rialzo";
+        } else if (negativeCount > positiveCount) {
+            color = 0xE74C3C;
+            title = "📉  Mercato in Ribasso";
+        } else {
+            color = 0x95A5A6;
+            title = "➡️  Mercato Stabile";
+        }
 
         // Orario prossimo aggiornamento
         int intervalHours = plugin.getConfig().getInt("update-interval-hours", 3);
-        ZonedDateTime nextUpdate = ZonedDateTime.now(ZoneId.of("Europe/Rome"))
-                .plusHours(intervalHours);
+        ZonedDateTime nextUpdate = ZonedDateTime.now(ZoneId.of("Europe/Rome")).plusHours(intervalHours);
         String nextUpdateStr = nextUpdate.format(DateTimeFormatter.ofPattern("HH:mm"));
 
-        // Fields: 2 per riga (inline true), separatore dopo ogni coppia
+        // Menzione ruolo
+        String roleId = plugin.getConfig().getString("mention-role-id", "0");
+        String mention = roleId.equals("0") ? "" : "<@&" + roleId + "> ";
+
+        // Fields: 2 per riga
         StringBuilder fields = new StringBuilder();
         for (int i = 0; i < results.size(); i++) {
             ItemResult r = results.get(i);
@@ -149,7 +169,6 @@ public class MarketTask extends BukkitRunnable {
             fields.append("\"inline\":true");
             fields.append("}");
 
-            // Dopo ogni coppia di 2 item aggiungi field vuoto full-width per forzare a capo
             if ((i + 1) % 2 == 0 && i < results.size() - 1) {
                 fields.append(",{\"name\":\"\\u200b\",\"value\":\"\\u200b\",\"inline\":false}");
             }
@@ -160,9 +179,10 @@ public class MarketTask extends BukkitRunnable {
         String timestamp = Instant.now().toString();
 
         String json = "{"
+                + "\"content\":\"" + escapeJson(mention) + "\","
                 + "\"username\":\"📊 Mercato\","
                 + "\"embeds\":[{"
-                + "\"title\":\"Aggiornamento Prezzi\","
+                + "\"title\":\"" + escapeJson(title) + "\","
                 + "\"color\":" + color + ","
                 + "\"fields\":[" + fields + "],"
                 + "\"image\":{\"url\":\"" + BANNER_URL + "\"},"
@@ -171,6 +191,22 @@ public class MarketTask extends BukkitRunnable {
                 + "}]}";
 
         sendWebhook(webhookUrl, json);
+
+        // Manda alert separati per boom/crash
+        for (ItemResult alert : alerts) {
+            String alertEmoji = alert.pctSell > 0 ? "🚀" : "🚨";
+            String alertType  = alert.pctSell > 0 ? "BOOM" : "CRASH";
+            String alertMsg = alertEmoji + " **" + alertType + " del mercato!**  "
+                    + alert.name + "  " + String.format("%+.1f%%", alert.pctSell)
+                    + "  @everyone";
+
+            String alertJson = "{"
+                    + "\"content\":\"" + escapeJson(alertMsg) + "\","
+                    + "\"username\":\"📊 Mercato\""
+                    + "}";
+
+            sendWebhook(webhookUrl, alertJson);
+        }
     }
 
     private void sendWebhook(String webhookUrl, String json) {
@@ -188,7 +224,7 @@ public class MarketTask extends BukkitRunnable {
 
             int responseCode = conn.getResponseCode();
             if (responseCode == 204 || responseCode == 200) {
-                plugin.getLogger().info("Aggiornamento mercato inviato su Discord.");
+                plugin.getLogger().info("Messaggio inviato su Discord.");
             } else {
                 plugin.getLogger().warning("Webhook risposta inattesa: " + responseCode);
             }
