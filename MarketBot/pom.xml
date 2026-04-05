@@ -20,10 +20,6 @@
             <id>papermc</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
-        <repository>
-            <id>discordsrv</id>
-            <url>https://nexus.scarsz.me/content/groups/public/</url>
-        </repository>
     </repositories>
 
     <dependencies>
@@ -34,14 +30,15 @@
             <version>1.21.1-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
-        <!-- DiscordSRV -->
+        <!-- DiscordSRV come JAR locale -->
         <dependency>
             <groupId>github.scarsz</groupId>
             <artifactId>discordsrv</artifactId>
-            <version>1.27.0</version>
-            <scope>provided</scope>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/DiscordSRV.jar</systemPath>
         </dependency>
-        <!-- EconomyShopGUI Premium viene aggiunto come JAR locale -->
+        <!-- EconomyShopGUI Premium come JAR locale -->
         <dependency>
             <groupId>me.gypsi</groupId>
             <artifactId>EconomyShopGUI-Premium</artifactId>
