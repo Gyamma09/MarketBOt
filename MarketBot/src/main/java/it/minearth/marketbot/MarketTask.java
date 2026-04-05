@@ -51,6 +51,7 @@ public class MarketTask extends BukkitRunnable {
 
         // Inizializza l'hook se non ancora fatto
         if (esgui == null) {
+            plugin.getLogger().info("Sezioni disponibili: " + esgui.getShopSections().keySet());
             EconomyShopGUI esguiPlugin = (EconomyShopGUI) plugin.getServer()
                     .getPluginManager().getPlugin("EconomyShopGUI-Premium");
             if (esguiPlugin == null) {
