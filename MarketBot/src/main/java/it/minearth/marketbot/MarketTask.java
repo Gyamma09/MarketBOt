@@ -110,7 +110,7 @@ public class MarketTask extends BukkitRunnable {
                 double diffBuy  = firstRun ? 0 : currentBuy  - lastBuy;
 
                 // Nome leggibile: usa il material dell'item
-                String displayName = shopItem.getMaterialName();
+                String displayName = shopItem.getName();
 
                 results.add(new ItemResult(displayName, currentSell, currentBuy,
                         diffSell, diffBuy, firstRun));
