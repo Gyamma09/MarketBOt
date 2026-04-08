@@ -26,7 +26,7 @@ public class MarketTask extends BukkitRunnable {
     private final PriceStorage storage;
     private EconomyShopGUIHook esgui;
 
-    private static final String BANNER_URL = "https://i.imgur.com/iSe2ZRj.jpeg";
+    private static final String BANNER_URL = "https://i.imgur.com/UbFEoLk.jpeg";
 
     public MarketTask(MarketBot plugin, PriceStorage storage) {
         this.plugin = plugin;
